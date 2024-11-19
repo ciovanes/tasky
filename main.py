@@ -3,7 +3,7 @@ from utils import *
 from enum import Enum
 from tkinter import ttk
 import tkinter as tk
-
+from validator import Validator
 
 class ColorMode(Enum):
     DARK = 'dark'
@@ -51,43 +51,60 @@ class CreateTaskFrame(ctk.CTkFrame):
         # row and column configure
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
         self.grid_columnconfigure(0, weight=1, uniform='equal')
         self.grid_columnconfigure(1, weight=1, uniform='equal')
-        # self.grid_columnconfigure(2, weight=1, uniform='equal')
+        self.grid_columnconfigure(2, weight=1, uniform='equal')
         self.grid_columnconfigure(3, weight=1, uniform='equal')
 
         # widgets
+        # task name
+        ctk.CTkLabel(self, text='Task name:').grid(row=0, column=0)
         self.task_name = ctk.CTkEntry(self, placeholder_text='Task name')
-        self.task_name.grid(row=0, column=0, padx=20)
+        self.task_name.grid(row=1, column=0, padx=20)
 
         self.error_task_name = ctk.CTkLabel(self, text='', text_color='red')
-        self.error_task_name.grid(row=1, column=0)
+        self.error_task_name.grid(row=2, column=0)
 
+        # task priority
         priority_values = ['Low', 'Medium', 'Hight']
+        ctk.CTkLabel(self, text='Priorities:').grid(row=0, column=1)
         self.task_priority = ctk.CTkComboBox(self, values=priority_values)
-        self.task_priority.grid(row=0, column=1)
+        self.task_priority.grid(row=1, column=1)
 
+        # task due date
+        ctk.CTkLabel(self, text='Due date:').grid(row=0, column=2)
+        self.due_date = ctk.CTkEntry(self, placeholder_text='dd/mm/aaaa')
+        self.due_date.grid(row=1, column=2)
+
+        self.error_due_date = ctk.CTkLabel(self, text='', text_color='red')
+        self.error_task_name.grid(row=2, column=2)
+
+        # create task
         self.create_task = ctk.CTkButton(self, text='Create task', command=self.get_new_task)
-        self.create_task.grid(row=0, column=3)
+        self.create_task.grid(row=1, column=3)
+
+        self.validator = Validator()
 
 
     def get_new_task(self):
-        try:
-            task_name = self.task_name.get()
-            task_priority = self.task_priority.get()
-            assert(task_name != '')
-            print(f'Task name: {task_name}, Task priority: {task_priority}')
-        except AssertionError:
-            self.change_error_text()
+        task_name = self.task_name.get()
+        due_date = self.due_date.get()
+        task_priority = self.task_priority.get()
 
-    def change_error_text(self):
-        self.error_task_name.configure(text="Task name can't be blank")
-        self.after(1500, self.clear_error_text)
+        print(task_name)
+        if not self.validator.validate_task_name(task_name):
+            name_error_msg = self.validator.get_errors()[0]
+            generate_error_text(self, self.error_task_name, name_error_msg, 1500)
+            return
 
-    def clear_error_text(self):
-        self.error_task_name.configure(text='')
+        if not self.validator.validate_due_date(due_date):
+            date_error_msg = self.validator.get_errors()[0]
+            generate_error_text(self, self.error_due_date, date_error_msg, 1500)
+            return
 
+        print(f'Task name: {task_name}, Task priority: {task_priority}, Task due date: {due_date}')
 
 class ViewFrame(ctk.CTkFrame):
 
