@@ -4,10 +4,16 @@ from enum import Enum
 from tkinter import ttk
 import tkinter as tk
 from validator import Validator
+from tkinter import messagebox
+
 
 class ColorMode(Enum):
     DARK = 'dark'
     LIGHT = 'light'
+
+class TaskState(Enum):
+    DOING = 'doing'
+    DONE = 'done'
 
 
 class TopFrame(ctk.CTkFrame):
@@ -26,7 +32,7 @@ class TopFrame(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1)
 
         # widgets
-        self.logo_img = getImage('./media/logo.png', 30, 30)
+        self.logo_img = getImage('./media/logo.png', 50, 50)
         self.logo = ctk.CTkLabel(self, text='', image=self.logo_img)
         self.logo.grid(row=0, column=0, pady=10, padx=30, sticky='nw')
 
@@ -45,8 +51,9 @@ class TopFrame(ctk.CTkFrame):
 
 class CreateTaskFrame(ctk.CTkFrame):
 
-    def __init__(self, master, **kwards):
+    def __init__(self, master, view_frame, **kwards):
         super().__init__(master, **kwards)
+        self.view_frame = view_frame
 
         # row and column configure
         self.grid_rowconfigure(0, weight=1)
@@ -60,7 +67,7 @@ class CreateTaskFrame(ctk.CTkFrame):
 
         # widgets
         # task name
-        ctk.CTkLabel(self, text='Task name:').grid(row=0, column=0)
+        ctk.CTkLabel(self, text='*Task name:').grid(row=0, column=0)
         self.task_name = ctk.CTkEntry(self, placeholder_text='Task name')
         self.task_name.grid(row=1, column=0, padx=20)
 
@@ -79,7 +86,7 @@ class CreateTaskFrame(ctk.CTkFrame):
         self.due_date.grid(row=1, column=2)
 
         self.error_due_date = ctk.CTkLabel(self, text='', text_color='red')
-        self.error_task_name.grid(row=2, column=2)
+        self.error_due_date.grid(row=2, column=2)
 
         # create task
         self.create_task = ctk.CTkButton(self, text='Create task', command=self.get_new_task)
@@ -89,12 +96,13 @@ class CreateTaskFrame(ctk.CTkFrame):
 
 
     def get_new_task(self):
-        task_name = self.task_name.get()
+        name = self.task_name.get()
+        priority = self.task_priority.get()
+        state = TaskState.DOING.value
         due_date = self.due_date.get()
-        task_priority = self.task_priority.get()
 
-        print(task_name)
-        if not self.validator.validate_task_name(task_name):
+        print(name)
+        if not self.validator.validate_task_name(name):
             name_error_msg = self.validator.get_errors()[0]
             generate_error_text(self, self.error_task_name, name_error_msg, 1500)
             return
@@ -104,7 +112,9 @@ class CreateTaskFrame(ctk.CTkFrame):
             generate_error_text(self, self.error_due_date, date_error_msg, 1500)
             return
 
-        print(f'Task name: {task_name}, Task priority: {task_priority}, Task due date: {due_date}')
+        print(f'Task name: {name}, Task priority: {priority}, Task due date: {due_date}')
+        self.view_frame.add_new_row(name, priority, state, due_date)
+
 
 class ViewFrame(ctk.CTkFrame):
 
@@ -117,13 +127,14 @@ class ViewFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         # widgets
-        columns = ('task_name', 'task_priority', 'task_state')
+        columns = ('task_name', 'task_priority', 'task_state', 'due date')
         self.tree = ttk.Treeview(self, columns=columns, show='headings')
 
         # define headings
         self.tree.heading(columns[0], text='Task')
         self.tree.heading(columns[1], text='Priority')
         self.tree.heading(columns[2], text='State')
+        self.tree.heading(columns[3], text='Due date')
 
         self.tree.grid(row=0, column=0, sticky='nsew')
 
@@ -138,27 +149,88 @@ class ViewFrame(ctk.CTkFrame):
 
     def generate_sample_data(self):
         data = []
-        for n in range(1, 100):
+        for n in range(1, 10):
             data.append((f'task {n}', f'priority {n}', f'state {n}'))
         return data
 
+    def add_new_row(self, name, priority, state, due_date):
+        self.tree.insert('', 'end', values=(name, priority, state, due_date))
+
+    def delete_row(self):
+        items = self.tree.selection()
+
+        if not items:
+            messagebox.showinfo(title='EY', message='You need to select an item to delete it')
+            return
+
+        for i in items:
+            self.tree.delete(i)
+
+
+    def complete_task(self):
+        items = self.tree.selection()
+
+        if not items:
+            messagebox.showinfo(title='EY', message='You need to select an item to complete it')
+            return
+
+        for i in items:
+            item_values = self.tree.item(i)['values']
+            if (item_values[2] == TaskState.DOING.value):
+                new_value = (item_values[0], item_values[1], TaskState.DONE.value, item_values[3])
+                self.tree.item(i, values=new_value)
+                print('se ha actualizado la task')
 
 class BottomFrame(ctk.CTkFrame):
 
-    def __init__(self, master, **kwards):
+    def __init__(self, master, view_frame, **kwards):
         super().__init__(master, **kwards)
+        self.view_frame = view_frame
 
         # row and column configure
         self.grid_rowconfigure(0, weight=1)
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(2, weight=1)
-        self.grid_columnconfigure(3, weight=1)
 
-        # widgets
-        self.task_name = ctk.CTkEntry(self)
-        self.task_name.grid(row=0, column=0)
+        # left frame
+        self.left_frame = ctk.CTkFrame(self)
+        self.left_frame.grid(row=0, column=0, sticky='w')
+
+        self.left_frame.grid_columnconfigure(0, weight=1)
+        self.left_frame.grid_columnconfigure(1, weight=1)
+        self.left_frame.grid_columnconfigure(2, weight=1)
+
+        self.left_frame.grid_columnconfigure(0, weight=1)
+
+        # left frame widgets
+        self.delete_button = ctk.CTkButton(self.left_frame, text='X', corner_radius=20, width=10,
+                                           command=self.view_frame.delete_row)
+        self.delete_button.grid(row=0, column=0, sticky='w')
+
+        self.edit_button= ctk.CTkButton(self.left_frame, text='E', corner_radius=20, width=10)
+        self.edit_button.grid(row=0, column=1, sticky='w', padx=10)
+
+        self.done_button= ctk.CTkButton(self.left_frame, text='D', corner_radius=20, width=10,
+                                        command=self.view_frame.complete_task)
+        self.done_button.grid(row=0, column=2, sticky='w')
+
+
+        # right frame
+        self.right_frame = ctk.CTkFrame(self)
+        self.right_frame.grid(row=0, column=1, sticky='e')
+
+        self.right_frame.grid_columnconfigure(0, weight=1)
+        self.right_frame.grid_columnconfigure(1, weight=1)
+
+        self.right_frame.grid_rowconfigure(0, weight=1)
+
+        # right frame widgets
+        self.task_counter = ctk.CTkLabel(self.right_frame, text='Total tasks: 20')
+        self.task_counter.grid(row=0, column=0, sticky='e', padx=20)
+
+        self.done_tasks_counter = ctk.CTkLabel(self.right_frame, text='Done tasks: 0')
+        self.done_tasks_counter.grid(row=0, column=1, sticky='e')
 
 
 class App(ctk.CTk):
@@ -174,30 +246,21 @@ class App(ctk.CTk):
         self.geometry(f'{self.WIDTH}x{self.HEIGHT}')
         center_window(self, self.WIDTH, self.HEIGHT)
 
-        # row and column configure
-        # self.grid_rowconfigure(0, weight=1)
-        # self.grid_rowconfigure(1, weight=2)
-        # self.grid_rowconfigure(2, weight=9)
-        # self.grid_rowconfigure(3, weight=2)
-
-        # self.grid_columnconfigure(0, weight=1)
-
         # widgets
         self.top_frame = TopFrame(master=self)
-        # self.top_frame.grid(row=0, column=0, sticky='new')
         self.top_frame.pack(fill='x')
 
-        self.create_task_frame = CreateTaskFrame(master=self)
-        # self.create_task_frame.grid(row=1, column=0, sticky='new')
+        self.view_frame = ViewFrame(master=self)
+
+        self.create_task_frame = CreateTaskFrame(master=self, view_frame=self.view_frame)
         self.create_task_frame.pack(fill='x')
 
-        self.view_frame = ViewFrame(master=self)
-        # self.view_frame.grid(row=2, column=0, sticky='nsew')
-        self.view_frame.pack(fill='both', expand=True)
+        self.view_frame.pack(fill='both', expand=True, padx=20)
 
-        self.bottom_frame = BottomFrame(master=self)
-        # self.bottom_frame.grid(row=3, column=0, sticky='sew')
-        self.bottom_frame.pack()
+        self.bottom_frame = BottomFrame(master=self, view_frame=self.view_frame)
+        self.bottom_frame.pack(fill='both', padx=20)
+
+        ctk.CTkLabel(self, text='', height=10).pack()
 
 
 if __name__ == '__main__':
