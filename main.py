@@ -195,10 +195,13 @@ class ViewFrame(ctk.CTkFrame):
     def generate_sample_data(self):
         data = []
         priorities = [TaskPriority.LOW.value, TaskPriority.MEDIUM.value, TaskPriority.HIGH.value]
-        state = [TaskState.DOING.value, TaskState.DONE.value]
+        states = [TaskState.DOING.value, TaskState.DONE.value]
         for n in range(1, 10):
             self.total_tasks += 1
-            data.append((f'task {n}', f'{rd.choice(priorities)}', f'{rd.choice(state)}'))
+            act_sate = rd.choice(states)
+            if (act_sate == TaskState.DONE.value):
+                self.complete_tasks += 1
+            data.append((f'task {n}', f'{rd.choice(priorities)}', f'{act_sate}', '', datetime.now().strftime('%d/%m/%Y')))
         return data
 
     def add_new_row(self, name, priority, state, due_date, creation_date):
