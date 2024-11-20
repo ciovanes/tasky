@@ -1,8 +1,8 @@
 import customtkinter as ctk
 from PIL import Image, ImageTk
+from customtkinter import CTkImage, CTkLabel
 
-
-def center_window(root: ctk.CTk, width: int, height: int):
+def center_window(root: ctk.CTk, width: int, height: int) -> None:
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
 
@@ -12,7 +12,13 @@ def center_window(root: ctk.CTk, width: int, height: int):
     root.geometry(f'{pos_x}+{pos_y}')
     root.minsize(width=width, height=height)
 
+def getImage(path_to_image: str, width: int, height: int) -> CTkImage:
+    image = Image.open(path_to_image).resize((width, height), Image.LANCZOS)
+    return CTkImage(image)
 
-def getImage(pathToImage: str, width, height) -> ImageTk:
-    image = Image.open(pathToImage).resize((width, height), Image.LANCZOS)
-    return ImageTk.PhotoImage(image)
+def generate_text(root, label: CTkLabel, text: str, ms: int) -> None:
+    label.configure(text=text)
+    root.after(ms, lambda: clear_text(label))
+
+def clear_text(label: CTkLabel) -> None:
+    label.configure(text='')
